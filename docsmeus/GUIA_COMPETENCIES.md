@@ -639,14 +639,16 @@ Authorization: Bearer SEU_TOKEN_ADMIN
 
 Agora você tem o módulo de competências completo! Ele permite:
 
-- ✅ Criar competências (gestor/admin)
+- ✅ Criar competências (apenas admin)
 - ✅ Listar competências com filtros e busca
 - ✅ Buscar por tipo (desempenho, comportamento, técnica, liderança)
 - ✅ Buscar por competenciaDe (gestor, colaborador, todos)
 - ✅ Ver estatísticas de competências
-- ✅ Atualizar competências (gestor/admin)
+- ✅ Atualizar competências (apenas admin)
 - ✅ Deletar competências (apenas admin)
 - ✅ Validação de critérios (1 a 10 por competência)
-- ✅ Controle de permissões por tipo de usuário
+- ✅ Controle de permissões por tipo de usuário (apenas admin pode criar/editar/deletar)
+
+**IMPORTANTE:** Apenas administradores podem criar, editar ou deletar competências. Gestores e colaboradores podem apenas visualizar.
 
 Próximo passo: Módulo Nine Box!

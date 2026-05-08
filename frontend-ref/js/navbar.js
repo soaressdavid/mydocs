@@ -2,7 +2,7 @@
 // NAVBAR.JS — Navegação, dark mode, usuário logado
 // =============================================
 
-import { getUser, sairDaConta, toggleUserMenu, updateHeaderUser, isAdmin, isGestorOrAdmin } from './auth.js';
+import { getUser, sairDaConta, toggleUserMenu, updateHeaderUser, isAdmin, isGestorOrAdmin, isGestor, isColaborador } from './auth.js';
 
 // ---- SUBMENU TOGGLE ----
 window.toggleSubmenu = function(e, link) {
@@ -52,6 +52,26 @@ function aplicarPermissoesNav() {
   document.querySelectorAll('[data-role="gestorOrAdmin"]').forEach(el => {
     el.style.display = isGestorOrAdmin() ? '' : 'none';
   });
+
+  // Avaliações 180° e 360° - visibilidade por tipo de usuário
+  const links180 = document.querySelectorAll('.navbar-submenu-link[href*="avaliacao-180"]');
+  const links360 = document.querySelectorAll('.navbar-submenu-link[href*="avaliacao-360"]');
+
+  // Colaborador: vê apenas 360° (colaborador avalia gestor)
+  if (isColaborador()) {
+    links180.forEach(link => link.parentElement.style.display = 'none');
+    links360.forEach(link => link.parentElement.style.display = '');
+  }
+  // Gestor: vê apenas 180° (gestor avalia colaborador)
+  else if (isGestor()) {
+    links180.forEach(link => link.parentElement.style.display = '');
+    links360.forEach(link => link.parentElement.style.display = 'none');
+  }
+  // Admin: vê tudo
+  else if (isAdmin()) {
+    links180.forEach(link => link.parentElement.style.display = '');
+    links360.forEach(link => link.parentElement.style.display = '');
+  }
 }
 
 // ---- INIT ----

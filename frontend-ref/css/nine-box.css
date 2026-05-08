@@ -106,8 +106,8 @@
   border: 1.5px solid var(--border);
   font-size: 13px;
   font-family: inherit;
-  color: var(--text);
-  background: #f8fafc;
+  color: #1e293b;
+  background: #ffffff;
   transition: all 0.2s;
 }
 
@@ -116,6 +116,11 @@
   border-color: var(--primary-light);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
   outline: none;
+  background: white;
+}
+
+.nb-field select option {
+  color: #1e293b;
   background: white;
 }
 

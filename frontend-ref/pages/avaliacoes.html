@@ -45,13 +45,13 @@
       </a>
       <ul class="navbar-submenu">
         <li><a href="avaliacoes.html" class="navbar-submenu-link active"><i class="fa-solid fa-star"></i> Avaliações</a></li>
-        <li><a href="nine-box.html" class="navbar-submenu-link"><i class="fa-solid fa-th"></i> Nine Box</a></li>
+        <li data-role="gestorOrAdmin"><a href="nine-box.html" class="navbar-submenu-link"><i class="fa-solid fa-th"></i> Nine Box</a></li>
         <li><a href="competencias.html" class="navbar-submenu-link"><i class="fa-solid fa-clipboard-check"></i> Competências</a></li>
-        <li><a href="avaliacao-180.html" class="navbar-submenu-link active"><i class="fa-solid fa-rotate"></i> 180°</a></li>
-        <li><a href="avaliacao-360.html" class="navbar-submenu-link"><i class="fa-solid fa-arrows-spin"></i> 360°</a></li>
+        <li style="display:none"><a href="avaliacao-180.html" class="navbar-submenu-link active"><i class="fa-solid fa-rotate"></i> 180°</a></li>
+        <li style="display:none"><a href="avaliacao-360.html" class="navbar-submenu-link"><i class="fa-solid fa-arrows-spin"></i> 360°</a></li>
       </ul>
     </li>
-    <li class="navbar-item" data-role="gestorOrAdmin"><a href="relatorios.html" class="navbar-link"><i class="fa-solid fa-chart-bar"></i><span>Relatórios</span></a></li>
+    <li class="navbar-item"><a href="relatorios.html" class="navbar-link"><i class="fa-solid fa-chart-bar"></i><span>Relatórios</span></a></li>
     <li class="navbar-item"><a href="../perfil.html" class="navbar-link"><i class="fa-solid fa-user"></i><span>Perfil</span></a></li>
   </ul>
 </nav>
@@ -69,14 +69,16 @@
           <div class="av-tipo-icon">
             <i class="fa-solid fa-user-tie"></i>
           </div>
-          <span>Avaliação de Gestor</span>
+          <span>Avaliação de Gestor (360°)</span>
+          <small style="font-size:11px;color:var(--text-muted);margin-top:4px">Colaborador avalia Gestor</small>
         </div>
 
         <div class="av-tipo-card" data-tipo="colaborador" id="card-colaborador" onclick="selecionarTipo('colaborador')">
           <div class="av-tipo-icon">
             <i class="fa-solid fa-users"></i>
           </div>
-          <span>Avaliação de Colaborador</span>
+          <span>Avaliação de Colaborador (180°)</span>
+          <small style="font-size:11px;color:var(--text-muted);margin-top:4px">Gestor avalia Colaborador</small>
         </div>
 
         <div class="av-tipo-card" data-tipo="historico" onclick="selecionarTipo('historico')">
@@ -163,10 +165,13 @@
       <section class="av-historico-card">
         <div class="av-historico-header">
           <p class="av-section-title">Histórico</p>
-          <div class="av-filtros">
-            <button class="av-filtro active" data-filtro="todos" onclick="filtrar('todos')">Todos</button>
-            <button class="av-filtro" data-filtro="recebidas" onclick="filtrar('recebidas')">Recebidas</button>
-            <button class="av-filtro" data-filtro="feitas" onclick="filtrar('feitas')">Feitas por mim</button>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="av-filtros" id="filtros-historico">
+              <!-- Filtros injetados pelo JS conforme permissão -->
+            </div>
+            <button onclick="exportarAvaliacoesCSV()" style="padding:6px 12px;font-size:11px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;margin:0;width:auto;font-weight:600;display:flex;align-items:center;gap:4px" title="Exportar para CSV">
+              <i class="fa-solid fa-file-csv"></i> Exportar
+            </button>
           </div>
         </div>
         <div id="historico-lista">
@@ -183,10 +188,8 @@
       <section class="av-historico-card" style="max-width:600px;width:100%">
         <div class="av-historico-header">
           <p class="av-section-title">Histórico de Avaliações</p>
-          <div class="av-filtros">
-            <button class="av-filtro active" data-filtro="todos" onclick="filtrarFull('todos')">Todos</button>
-            <button class="av-filtro" data-filtro="recebidas" onclick="filtrarFull('recebidas')">Recebidas</button>
-            <button class="av-filtro" data-filtro="feitas" onclick="filtrarFull('feitas')">Feitas por mim</button>
+          <div class="av-filtros" id="filtros-historico-full">
+            <!-- Filtros injetados pelo JS conforme permissão -->
           </div>
         </div>
         <div id="historico-lista-full">
@@ -216,9 +219,44 @@
 
   const notas = { pontualidade:0, comunicacao:0, tecnico:0, proatividade:0, equipe:0 };
   let tipoSelecionado = null;
-  let filtroAtual = 'todos';
-  let filtroFullAtual = 'todos';
+  let filtroAtual = 'feitas'; // Padrão: mostrar apenas avaliações feitas
+  let filtroFullAtual = 'feitas'; // Padrão: mostrar apenas avaliações feitas
   let todasAvaliacoes = [];
+
+  // --- Criar filtros dinamicamente baseado em permissões ---
+  function criarFiltros() {
+    const filtrosHistorico = document.getElementById('filtros-historico');
+    const filtrosHistoricoFull = document.getElementById('filtros-historico-full');
+    
+    let htmlFiltros = '';
+    
+    if (isAdmin()) {
+      // Admin vê: Todas | Feitas por mim
+      htmlFiltros = `
+        <button class="av-filtro" data-filtro="todas" onclick="filtrar('todas')">Todas</button>
+        <button class="av-filtro active" data-filtro="feitas" onclick="filtrar('feitas')">Feitas por mim</button>
+      `;
+    } else {
+      // Gestor/Colaborador vê apenas: Feitas por mim
+      htmlFiltros = `
+        <button class="av-filtro active" data-filtro="feitas" onclick="filtrar('feitas')">Feitas por mim</button>
+      `;
+    }
+    
+    filtrosHistorico.innerHTML = htmlFiltros;
+    
+    // Mesmos filtros para histórico completo
+    if (isAdmin()) {
+      filtrosHistoricoFull.innerHTML = `
+        <button class="av-filtro" data-filtro="todas" onclick="filtrarFull('todas')">Todas</button>
+        <button class="av-filtro active" data-filtro="feitas" onclick="filtrarFull('feitas')">Feitas por mim</button>
+      `;
+    } else {
+      filtrosHistoricoFull.innerHTML = `
+        <button class="av-filtro active" data-filtro="feitas" onclick="filtrarFull('feitas')">Feitas por mim</button>
+      `;
+    }
+  }
 
   // --- Aplica permissões: gestor só avalia colaborador, colaborador só avalia gestor ---
   function aplicarPermissoes() {
@@ -253,8 +291,14 @@
     }
     document.getElementById('step-tipo').style.display = 'none';
     document.getElementById('step-form').style.display = 'block';
-    document.getElementById('av-header-title').textContent =
-      tipoSelecionado === 'gestor' ? 'Avaliar Gestor' : 'Avaliar Colaborador';
+    
+    // Atualizar título baseado no tipo de avaliação
+    if (tipoSelecionado === 'gestor') {
+      document.getElementById('av-header-title').textContent = 'Avaliar Gestor (360°)';
+    } else {
+      document.getElementById('av-header-title').textContent = 'Avaliar Colaborador (180°)';
+    }
+    
     carregarAvaliaveis();
     initStars();
     carregarHistorico();
@@ -276,9 +320,21 @@
     const label  = document.getElementById('avaliado-label');
     try {
       let tipo;
-      if (isGestor())       { tipo = 'colaborador'; label.textContent = 'Colaborador'; }
-      else if (isColaborador()) { tipo = 'gestor';  label.textContent = 'Gestor'; }
-      else                  { label.textContent = 'Usuário'; }
+      // Gestor avalia colaborador (180°)
+      if (isGestor()) { 
+        tipo = 'colaborador'; 
+        label.textContent = 'Colaborador (Avaliação 180°)'; 
+      }
+      // Colaborador avalia gestor (360°)
+      else if (isColaborador()) { 
+        tipo = 'gestor';  
+        label.textContent = 'Gestor (Avaliação 360°)'; 
+      }
+      // Admin pode avaliar qualquer um
+      else { 
+        label.textContent = 'Usuário'; 
+      }
+      
       const params = tipo ? { tipo, limit:100 } : { limit:100 };
       const res = await usersApi.list(params);
       const users = res.data.users.filter(u => u.id !== user.id);
@@ -323,10 +379,24 @@
     if (!Object.values(notas).some(v => v > 0)) { showToast('Avalie pelo menos um critério.', 'error'); return; }
     const btn = document.getElementById('btn-submit');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + (avaliacaoEditandoId ? 'Salvando...' : 'Enviando...');
     try {
-      await evaluationsApi.create({ avaliadoId, criterios: {...notas}, comentario: comentario || null, anonima: true });
-      showToast('Avaliação enviada com sucesso!', 'success');
+      if (avaliacaoEditandoId) {
+        // Atualizar avaliação existente
+        await evaluationsApi.update(avaliacaoEditandoId, { 
+          avaliadoId, 
+          criterios: {...notas}, 
+          comentario: comentario || null 
+        });
+        showToast('Avaliação atualizada com sucesso!', 'success');
+        avaliacaoEditandoId = null;
+        document.getElementById('btn-text').textContent = 'Enviar Avaliação';
+      } else {
+        // Criar nova avaliação
+        await evaluationsApi.create({ avaliadoId, criterios: {...notas}, comentario: comentario || null, anonima: true });
+        showToast('Avaliação enviada com sucesso!', 'success');
+      }
+      
       CRITERIOS.forEach(k => { notas[k] = 0; });
       document.querySelectorAll('.stars span').forEach(s => s.classList.remove('active'));
       document.getElementById('avaliado').value = '';
@@ -335,7 +405,7 @@
       document.getElementById('media-geral').textContent = '—';
       carregarHistorico();
     } catch {}
-    finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span id="btn-text">Enviar Avaliação</span>'; }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span id="btn-text">' + (avaliacaoEditandoId ? 'Salvar Alterações' : 'Enviar Avaliação') + '</span>'; }
   };
 
   // --- Historico lateral ---
@@ -352,14 +422,25 @@
   function renderHistorico() {
     const container = document.getElementById('historico-lista');
     let lista = todasAvaliacoes;
-    if (filtroAtual === 'recebidas') lista = lista.filter(a => a.avaliadoId === user.id);
-    if (filtroAtual === 'feitas')    lista = lista.filter(a => a.avaliadorId === user.id);
+    
+    // Aplicar filtros
+    if (filtroAtual === 'todas') {
+      // Admin: mostrar todas as avaliações do sistema
+      if (!isAdmin()) {
+        lista = lista.filter(a => a.avaliadorId === user.id);
+      }
+      // Se for admin, não filtra (mostra todas)
+    } else if (filtroAtual === 'feitas') {
+      // Mostrar apenas avaliações feitas pelo usuário
+      lista = lista.filter(a => a.avaliadorId === user.id);
+    }
+    
     renderLista(lista, container);
   }
 
   window.filtrar = function(f) {
     filtroAtual = f;
-    document.querySelectorAll('#step-form .av-filtro').forEach(b => b.classList.toggle('active', b.dataset.filtro === f));
+    document.querySelectorAll('#filtros-historico .av-filtro').forEach(b => b.classList.toggle('active', b.dataset.filtro === f));
     renderHistorico();
   };
 
@@ -377,30 +458,99 @@
   function renderHistoricoFull() {
     const container = document.getElementById('historico-lista-full');
     let lista = todasAvaliacoes;
-    if (filtroFullAtual === 'recebidas') lista = lista.filter(a => a.avaliadoId === user.id);
-    if (filtroFullAtual === 'feitas')    lista = lista.filter(a => a.avaliadorId === user.id);
+    
+    // Aplicar filtros
+    if (filtroFullAtual === 'todas') {
+      // Admin: mostrar todas as avaliações do sistema
+      if (!isAdmin()) {
+        lista = lista.filter(a => a.avaliadorId === user.id);
+      }
+      // Se for admin, não filtra (mostra todas)
+    } else if (filtroFullAtual === 'feitas') {
+      // Mostrar apenas avaliações feitas pelo usuário
+      lista = lista.filter(a => a.avaliadorId === user.id);
+    }
+    
     renderLista(lista, container);
   }
 
   window.filtrarFull = function(f) {
     filtroFullAtual = f;
-    document.querySelectorAll('#step-historico .av-filtro').forEach(b => b.classList.toggle('active', b.dataset.filtro === f));
+    document.querySelectorAll('#filtros-historico-full .av-filtro').forEach(b => b.classList.toggle('active', b.dataset.filtro === f));
     renderHistoricoFull();
   };
 
+
+
   // --- Render generico de lista ---
   function renderLista(lista, container) {
-    if (!lista.length) { container.innerHTML = '<p class="av-empty">Nenhuma avaliação encontrada.</p>'; return; }
+    if (!lista.length) { 
+      container.innerHTML = '<p class="av-empty">Nenhuma avaliação encontrada.</p>'; 
+      return; 
+    }
+    
     container.innerHTML = lista.map(a => {
-      const tipoLabel = TIPO_LABELS[a.tipoAvaliacao] || a.tipoAvaliacao;
+      // Determinar se é uma avaliação feita pelo usuário
+      const isFeita = a.avaliadorId === user.id;
+      const podeEditar = isFeita || isAdmin();
+      const podeExcluir = isFeita || isAdmin();
+      
+      // Verificar se passou 24 horas para edição
+      const dataAvaliacao = new Date(a.data);
+      const agora = new Date();
+      const diferencaHoras = (agora - dataAvaliacao) / (1000 * 60 * 60);
+      const podeEditarPorTempo = diferencaHoras <= 24 || isAdmin();
+      const podeExcluirPorTempo = diferencaHoras <= 24 || isAdmin();
+      
+      // Definir o nome a ser exibido
+      let nomeExibido;
+      if (isFeita) {
+        // Avaliação feita: mostrar quem foi avaliado
+        nomeExibido = (a.avaliado ? a.avaliado.nome : 'Usuário');
+      } else {
+        // Admin vendo avaliações de outros: mostrar avaliado
+        nomeExibido = (a.avaliado ? a.avaliado.nome : 'Usuário');
+      }
+      
+      // Adicionar labels 180° e 360° baseado no tipoAvaliacao
+      let tipoLabel = TIPO_LABELS[a.tipoAvaliacao] || a.tipoAvaliacao;
+      if (a.tipoAvaliacao === 'gestor_para_colaborador') {
+        tipoLabel = 'Gestor → Colaborador (180°)';
+      } else if (a.tipoAvaliacao === 'colaborador_para_gestor') {
+        tipoLabel = 'Colaborador → Gestor (360°)';
+      }
+      
       const tipoClass = a.tipoAvaliacao || '';
       const criteriosBadges = a.criterios
         ? Object.entries(a.criterios).filter(([,v]) => v > 0)
             .map(([k,v]) => '<span class="av-criterio-badge">' + (CRITERIOS_LABEL[k]||k) + '<span class="mini-stars">' + '★'.repeat(v) + '</span></span>').join('')
         : '';
+      
+      // Botões de ação
+      let acoes = '';
+      if (podeEditar || podeExcluir) {
+        acoes = '<div style="display:flex;gap:6px;margin-top:8px">';
+        
+        // Botão de Editar
+        if (podeEditar && podeEditarPorTempo) {
+          acoes += '<button onclick="editarAvaliacao(\'' + a.id + '\')" style="padding:4px 10px;font-size:11px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:6px;cursor:pointer;font-weight:600"><i class="fa-solid fa-pen"></i> Editar</button>';
+        } else if (podeEditar && !podeEditarPorTempo) {
+          acoes += '<button disabled style="padding:4px 10px;font-size:11px;background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;border-radius:6px;cursor:not-allowed;font-weight:600" title="Não é possível editar após 24 horas"><i class="fa-solid fa-clock"></i> Prazo expirado</button>';
+        }
+        
+        // Botão de Excluir
+        if (podeExcluir && podeExcluirPorTempo) {
+          acoes += '<button onclick="excluirAvaliacao(\'' + a.id + '\',\'' + nomeExibido.replace(/'/g, "\\'") + '\')" style="padding:4px 10px;font-size:11px;background:transparent;color:var(--danger);border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-weight:600"><i class="fa-solid fa-trash"></i> Excluir</button>';
+        } else if (podeExcluir && !podeExcluirPorTempo) {
+          acoes += '<button disabled style="padding:4px 10px;font-size:11px;background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;border-radius:6px;cursor:not-allowed;font-weight:600" title="Não é possível excluir após 24 horas"><i class="fa-solid fa-clock"></i> Prazo expirado</button>';
+        }
+        
+        acoes += '</div>';
+      }
+      
       return '<div class="av-item">' +
         '<div class="av-item-header">' +
-          '<span class="av-item-nome">' + (a.avaliado ? a.avaliado.nome : 'Usuário') + '</span>' +
+          '<span class="av-item-nome">' + nomeExibido + '</span>' +
           '<div class="av-item-meta">' +
             '<span class="av-item-tipo ' + tipoClass + '">' + tipoLabel + '</span>' +
             (a.anonima ? '<span style="font-size:11px;background:#f5f3ff;color:#6d28d9;padding:2px 8px;border-radius:100px;font-weight:600"><i class="fa-solid fa-user-secret"></i> Anônima</span>' : '') +
@@ -410,11 +560,145 @@
         (criteriosBadges ? '<div class="av-item-criterios">' + criteriosBadges + '</div>' : '') +
         (a.media ? '<div class="av-item-media">Média: ' + a.media + ' ★</div>' : '') +
         (a.comentario ? '<p class="av-item-comentario">"' + a.comentario + '"</p>' : '') +
+        acoes +
       '</div>';
     }).join('');
   }
 
+  // Editar avaliação
+  let avaliacaoEditandoId = null;
+  
+  window.editarAvaliacao = async function(id) {
+    try {
+      const res = await evaluationsApi.getById(id);
+      const av = res.data;
+      
+      // Verificar se passou 24 horas
+      const dataAvaliacao = new Date(av.data);
+      const agora = new Date();
+      const diferencaHoras = (agora - dataAvaliacao) / (1000 * 60 * 60);
+      
+      if (diferencaHoras > 24 && !isAdmin()) {
+        showToast('Não é possível editar avaliações após 24 horas da criação.', 'error');
+        return;
+      }
+      
+      avaliacaoEditandoId = id;
+      
+      // Voltar para o formulário
+      document.getElementById('step-historico').style.display = 'none';
+      document.getElementById('step-form').style.display = 'block';
+      document.getElementById('av-header-title').textContent = 'Editar Avaliação';
+      
+      // Preencher formulário
+      document.getElementById('avaliado').value = av.avaliadoId;
+      document.getElementById('comentario').value = av.comentario || '';
+      
+      // Preencher estrelas
+      if (av.criterios) {
+        Object.entries(av.criterios).forEach(([criterio, nota]) => {
+          notas[criterio] = nota;
+          const group = document.querySelector(`.stars[data-criterio="${criterio}"]`);
+          if (group) {
+            const spans = group.querySelectorAll('span');
+            highlight(spans, nota - 1);
+          }
+        });
+      }
+      
+      atualizarMedia();
+      
+      // Mudar texto do botão
+      document.getElementById('btn-text').textContent = 'Salvar Alterações';
+      
+    } catch {}
+  };
+  
+  // Excluir avaliação
+  window.excluirAvaliacao = async function(id, nome) {
+    try {
+      // Buscar a avaliação para verificar o prazo
+      const res = await evaluationsApi.getById(id);
+      const av = res.data;
+      
+      // Verificar se passou 24 horas
+      const dataAvaliacao = new Date(av.data);
+      const agora = new Date();
+      const diferencaHoras = (agora - dataAvaliacao) / (1000 * 60 * 60);
+      
+      if (diferencaHoras > 24 && !isAdmin()) {
+        showToast('Não é possível excluir avaliações após 24 horas da criação.', 'error');
+        return;
+      }
+      
+      if (!confirm(`Excluir a avaliação de "${nome}"? Esta ação não pode ser desfeita.`)) return;
+      
+      await evaluationsApi.delete(id);
+      showToast('Avaliação excluída com sucesso.', 'success');
+      
+      // Recarregar histórico
+      if (document.getElementById('step-historico').style.display !== 'none') {
+        carregarHistoricoFull();
+      } else {
+        carregarHistorico();
+      }
+    } catch (err) {
+      if (err.message && err.message.includes('24 horas')) {
+        showToast(err.message, 'error');
+      }
+    }
+  };
+  
+  // Exportar avaliações para CSV
+  window.exportarAvaliacoesCSV = function() {
+    let lista = todasAvaliacoes;
+    
+    // Aplicar filtros
+    if (filtroAtual === 'feitas') {
+      lista = lista.filter(a => a.avaliadorId === user.id);
+    } else if (filtroAtual === 'todas' && !isAdmin()) {
+      lista = lista.filter(a => a.avaliadorId === user.id);
+    }
+    
+    if (!lista.length) {
+      showToast('Nenhuma avaliação para exportar.', 'error');
+      return;
+    }
+    
+    // Criar CSV com BOM para Excel
+    const BOM = '\uFEFF';
+    const headers = ['Data', 'Avaliado', 'Tipo', 'Pontualidade', 'Comunicação', 'Técnico', 'Proatividade', 'Equipe', 'Média', 'Comentário'];
+    
+    const rows = lista.map(a => [
+      new Date(a.data).toLocaleDateString('pt-BR'),
+      a.avaliado ? a.avaliado.nome : 'Usuário',
+      TIPO_LABELS[a.tipoAvaliacao] || a.tipoAvaliacao,
+      a.criterios?.pontualidade || '',
+      a.criterios?.comunicacao || '',
+      a.criterios?.tecnico || '',
+      a.criterios?.proatividade || '',
+      a.criterios?.equipe || '',
+      a.media || '',
+      (a.comentario || '').replace(/"/g, '""')
+    ]);
+    
+    const csvContent = BOM + [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `avaliacoes_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    
+    showToast('Arquivo CSV exportado com sucesso!', 'success');
+  };
+
   aplicarPermissoes();
+  criarFiltros();
 </script>
 </body>
 </html>

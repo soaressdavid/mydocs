@@ -15,9 +15,20 @@ npm init -y
 ### 1.2 Instalar dependências
 
 ```bash
-npm install express prisma @prisma/client bcryptjs jsonwebtoken joi dotenv cors helmet
+npm install express prisma @prisma/client bcryptjs jsonwebtoken joi dotenv cors helmet cookie-parser
 npm install -D nodemon
 ```
+
+**Dependências principais:**
+- `express` - Framework web
+- `prisma` + `@prisma/client` - ORM para banco de dados
+- `bcryptjs` - Criptografia de senhas
+- `jsonwebtoken` - Autenticação JWT
+- `joi` - Validação de dados
+- `dotenv` - Variáveis de ambiente
+- `cors` - Permitir requisições cross-origin
+- `helmet` - Segurança HTTP
+- **`cookie-parser`** - Ler cookies HTTP (para HttpOnly cookies)
 
 ### 1.3 Configurar package.json
 
@@ -192,7 +203,7 @@ npx prisma generate
 
 Arquivo: `prisma/seed.js`
 
-**IMPORTANTE**: Use RAs reais. Cada pessoa já tem seu RA (como CPF).
+**IMPORTANTE**: Use RAs reais. Cada pessoa já tem seu RA (como CPF). O RA deve ter entre 5 e 10 caracteres alfanuméricos.
 
 ```javascript
 import { PrismaClient } from '@prisma/client';
@@ -246,7 +257,7 @@ async function main() {
       tipo: 'colaborador',
       cargo: 'Desenvolvedora',
       departamento: 'TI'
-    }
+    } 
   });
 
   // Criar avaliações bidirecionais anônimas
@@ -420,12 +431,12 @@ import Joi from 'joi';
 const registerSchema = Joi.object({
   ra: Joi.string()
     .min(5)
-    .max(15)
+    .max(10)
     .required()
     .messages({
-      'string.min': 'RA deve ter no mínimo 5 caracteres',
-      'string.max': 'RA deve ter no máximo 15 caracteres',
-      'any.required': 'RA é obrigatório (use o RA do banco do ENIAC)'
+      'string.min': 'RA deve ter entre 5 e 10 caracteres',
+      'string.max': 'RA deve ter entre 5 e 10 caracteres',
+      'any.required': 'RA é obrigatório'
     }),
   nome: Joi.string().min(3).required(),
   email: Joi.string().email().required(),
@@ -933,6 +944,7 @@ Arquivo: `src/app.js`
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser'; // IMPORTANTE: Para HttpOnly cookies
 import { errorHandler } from './middlewares/errorHandler.js';
 
 // Rotas
@@ -942,7 +954,16 @@ const app = express();
 
 // Middlewares
 app.use(helmet());
-app.use(cors());
+
+// ⚠️ IMPORTANTE: Cookie parser ANTES das rotas
+app.use(cookieParser());
+
+// ⚠️ IMPORTANTE: CORS com credentials para aceitar cookies
+app.use(cors({
+  origin: 'http://localhost:5500', // URL do frontend
+  credentials: true // Permite envio/recebimento de cookies
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -1047,9 +1068,11 @@ Authorization: Bearer SEU_TOKEN
 
 3. **Admin também tem RA**: Cada admin tem seu próprio RA.
 
-4. **Sistema não gera RA**: O sistema só valida se está no formato correto e se não está duplicado.
+4. **Sistema não gera RA**: O sistema só valida se está no formato correto (5 a 10 caracteres) e se não está duplicado.
 
 5. **Sem integração**: Não há integração com banco do ENIAC. O RA é apenas um dado que a pessoa informa.
+
+6. **Validação flexível**: O RA pode ter entre 5 e 10 caracteres alfanuméricos para acomodar diferentes formatos.
 
 ## Próximos Passos
 

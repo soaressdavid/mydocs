@@ -1,57 +1,80 @@
-lo
-const contatosExemplo = [
+// =============================================
+// USUÁRIOS MOCK (baseado no seed.js do backend)
+// =============================================
+const usuariosMock = [
   {
-    id: 1001,
+    id: "uuid-admin-001",
+    ra: "1234567",
+    nome: "Admin Sistema",
+    email: "admin@eniac.edu.br",
+    senha: "admin123", // Em produção, isso seria hash
+    tipo: "admin",
+    cargo: "Administrador",
+    departamento: "TI",
+    foto: null
+  },
+  {
+    id: "uuid-gestor-001",
+    ra: "2021001",
     nome: "João Silva",
-    email: "joao.silva@empresa.com",
+    email: "joao@eniac.edu.br",
+    senha: "senha123",
     tipo: "gestor",
+    cargo: "Gerente de TI",
     departamento: "Tecnologia",
     foto: null
   },
   {
-    id: 1002,
+    id: "uuid-colaborador-001",
+    ra: "2022001",
+    nome: "Ana Costa",
+    email: "ana@eniac.edu.br",
+    senha: "senha123",
+    tipo: "colaborador",
+    cargo: "Desenvolvedora",
+    departamento: "TI",
+    foto: null
+  },
+  {
+    id: "uuid-gestor-002",
+    ra: "2021002",
     nome: "Maria Santos",
-    email: "maria.santos@empresa.com",
+    email: "maria@eniac.edu.br",
+    senha: "senha123",
     tipo: "gestor",
+    cargo: "Gerente de RH",
     departamento: "Recursos Humanos",
     foto: null
   },
   {
-    id: 1003,
-    nome: "Ana Costa",
-    email: "ana.costa@empresa.com",
-    tipo: "colaborador",
-    cargo: "Desenvolvedora",
-    foto: null
-  },
-  {
-    id: 1004,
+    id: "uuid-colaborador-002",
+    ra: "2022002",
     nome: "Carlos Oliveira",
-    email: "carlos.oliveira@empresa.com",
+    email: "carlos@eniac.edu.br",
+    senha: "senha123",
     tipo: "colaborador",
     cargo: "Analista",
-    foto: null
-  },
-  {
-    id: 1005,
-    nome: "Pedro Lima",
-    email: "pedro.lima@empresa.com",
-    tipo: "gestor",
-    departamento: "Operações",
-    foto: null
-  },
-  {
-    id: 1006,
-    nome: "Beatriz Ferreira",
-    email: "beatriz.ferreira@empresa.com",
-    tipo: "colaborador",
-    cargo: "Designer",
+    departamento: "TI",
     foto: null
   }
 ];
 
+// Compatibilidade com código antigo (sem RA e senha)
+const contatosExemplo = usuariosMock.map(u => ({
+  id: u.id,
+  nome: u.nome,
+  email: u.email,
+  tipo: u.tipo,
+  departamento: u.departamento,
+  cargo: u.cargo,
+  foto: u.foto
+}));
+
 // Salvar contatos
 localStorage.setItem('contatos', JSON.stringify(contatosExemplo));
+
+// Salvar usuários completos (com senha) para login mock
+localStorage.setItem('usuariosMock', JSON.stringify(usuariosMock));
 
 // Adicionar algumas avaliações tradicionais de exemplo
 const avaliacoesExemplo = [
@@ -129,3 +152,7 @@ console.log("Dados de exemplo adicionados com sucesso!");
 console.log("Contatos:", contatosExemplo.length);
 console.log("Avaliações tradicionais:", avaliacoesExemplo.length);
 console.log("Avaliações Nine Box:", nineBoxExemplo.length);
+console.log("\n=== CREDENCIAIS DE TESTE ===");
+console.log("Admin: admin@eniac.edu.br / admin123");
+console.log("Gestor: joao@eniac.edu.br / senha123");
+console.log("Colaborador: ana@eniac.edu.br / senha123");

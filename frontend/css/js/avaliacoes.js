@@ -71,18 +71,29 @@ function renderHistoricoFull() {
   if (!container) return;
 
   let avaliacoes = getAvaliacoes();
-  if (!isGestor()) {
-    avaliacoes = avaliacoes.filter(a => a.tipo !== 'gestor');
+  
+  // Filtrar por tipo de usuário logado
+  if (isColaborador()) {
+    // Colaborador vê apenas avaliações de gestores (360°)
+    avaliacoes = avaliacoes.filter(a => a.tipo === 'gestor');
+  } else if (isGestor()) {
+    // Gestor vê apenas avaliações de colaboradores (180°)
+    avaliacoes = avaliacoes.filter(a => a.tipo === 'colaborador');
   }
+  // Admin vê tudo (não filtra)
+  
   avaliacoes = avaliacoes.slice().reverse();
 
   if (avaliacoes.length === 0) {
-    container.innerHTML = '<p class="av-empty">Nenhuma avaliação registrada.</p>';
+    const tipoMsg = isColaborador() ? 'Nenhuma avaliação 360° registrada.' : 
+                    isGestor() ? 'Nenhuma avaliação 180° registrada.' : 
+                    'Nenhuma avaliação registrada.';
+    container.innerHTML = `<p class="av-empty">${tipoMsg}</p>`;
     return;
   }
 
   container.innerHTML = avaliacoes.map(a => {
-    const tipoLabel = a.tipo === 'gestor' ? 'Gestor' : 'Colaborador';
+    const tipoLabel = a.tipo === 'gestor' ? 'Gestor (360°)' : 'Colaborador (180°)';
 
     if (a.tipo === 'colaborador' && a.tipoAvaliacao === 'comentario') {
       return `
@@ -119,7 +130,7 @@ function renderHistoricoFull() {
 }
 
 // =============================================
-// PERMISSÕES — só gestor avalia colaborador
+// PERMISSÕES — Visibilidade por tipo de usuário
 // =============================================
 function getUsuarioLogado() {
   const sessao = JSON.parse(localStorage.getItem('perfilLogado') || 'null');
@@ -129,34 +140,105 @@ function getUsuarioLogado() {
 
 function isGestor() {
   const user = getUsuarioLogado();
-  // Sem login = acesso total; gestor = pode avaliar colaborador
-  return !user || user.tipo === 'gestor';
+  return user && user.tipo === 'gestor';
+}
+
+function isColaborador() {
+  const user = getUsuarioLogado();
+  return user && user.tipo === 'colaborador';
+}
+
+function isAdmin() {
+  const user = getUsuarioLogado();
+  return user && user.tipo === 'admin';
 }
 
 function aplicarPermissoes() {
-  // Ocultar botão de avaliar colaborador no toggle (formulário antigo)
-  const btnColaborador = document.querySelector('.av-type-btn[data-type="colaborador"]');
-  if (btnColaborador) {
-    if (!isGestor()) {
-      btnColaborador.style.display = 'none';
-      setTipo('gestor');
-      const filtroGestor = document.querySelector('.av-filtro[data-filtro="gestor"]');
-      if (filtroGestor) filtroGestor.style.display = 'none';
-      const filtroTodos = document.querySelector('.av-filtro[data-filtro="todos"]');
-      if (filtroTodos) filtroTodos.style.display = 'none';
-      filtroAtual = 'colaborador';
-      document.querySelectorAll('.av-filtro').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.filtro === 'colaborador');
-      });
-    } else {
-      btnColaborador.style.display = '';
-    }
+  const user = getUsuarioLogado();
+  
+  // Se não está logado, redireciona para login
+  if (!user) {
+    window.location.href = '/pages/login.html';
+    return;
   }
 
-  // Ocultar card de colaborador na tela de seleção
-  const cardColaborador = document.getElementById('card-colaborador');
-  if (cardColaborador && !isGestor()) {
-    cardColaborador.style.display = 'none';
+  // COLABORADOR: Vê apenas avaliações 360° (colaborador avalia gestor)
+  if (isColaborador()) {
+    // Ocultar card de avaliar colaborador na tela de seleção
+    const cardColaborador = document.getElementById('card-colaborador');
+    if (cardColaborador) {
+      cardColaborador.style.display = 'none';
+    }
+
+    // Ocultar botão de avaliar colaborador no toggle (formulário antigo)
+    const btnColaborador = document.querySelector('.av-type-btn[data-type="colaborador"]');
+    if (btnColaborador) {
+      btnColaborador.style.display = 'none';
+    }
+
+    // Forçar tipo gestor (colaborador só avalia gestor = 360°)
+    setTipo('gestor');
+
+    // Ocultar filtros de gestor e todos
+    const filtroGestor = document.querySelector('.av-filtro[data-filtro="gestor"]');
+    if (filtroGestor) filtroGestor.style.display = 'none';
+    
+    const filtroTodos = document.querySelector('.av-filtro[data-filtro="todos"]');
+    if (filtroTodos) filtroTodos.style.display = 'none';
+
+    // Mostrar apenas filtro de colaborador (mas renomear para 360°)
+    const filtroColaborador = document.querySelector('.av-filtro[data-filtro="colaborador"]');
+    if (filtroColaborador) {
+      filtroColaborador.textContent = 'Avaliações 360°';
+      filtroColaborador.classList.add('active');
+    }
+
+    filtroAtual = 'gestor'; // Colaborador vê avaliações de gestores (360°)
+  }
+
+  // GESTOR: Vê apenas avaliações 180° (gestor avalia colaborador)
+  if (isGestor()) {
+    // Ocultar card de avaliar gestor na tela de seleção
+    const cardGestor = document.querySelector('.av-tipo-card[data-tipo="gestor"]');
+    if (cardGestor) {
+      cardGestor.style.display = 'none';
+    }
+
+    // Ocultar botão de avaliar gestor no toggle (formulário antigo)
+    const btnGestor = document.querySelector('.av-type-btn[data-type="gestor"]');
+    if (btnGestor) {
+      btnGestor.style.display = 'none';
+    }
+
+    // Forçar tipo colaborador (gestor só avalia colaborador = 180°)
+    setTipo('colaborador');
+
+    // Ocultar filtros de colaborador e todos
+    const filtroColaborador = document.querySelector('.av-filtro[data-filtro="colaborador"]');
+    if (filtroColaborador) filtroColaborador.style.display = 'none';
+    
+    const filtroTodos = document.querySelector('.av-filtro[data-filtro="todos"]');
+    if (filtroTodos) filtroTodos.style.display = 'none';
+
+    // Mostrar apenas filtro de gestor (mas renomear para 180°)
+    const filtroGestor = document.querySelector('.av-filtro[data-filtro="gestor"]');
+    if (filtroGestor) {
+      filtroGestor.textContent = 'Avaliações 180°';
+      filtroGestor.classList.add('active');
+    }
+
+    filtroAtual = 'colaborador'; // Gestor vê avaliações de colaboradores (180°)
+  }
+
+  // ADMIN: Vê tudo (não precisa ocultar nada)
+  if (isAdmin()) {
+    // Admin vê todos os tipos de avaliação
+    // Renomear filtros para deixar claro
+    const filtroGestor = document.querySelector('.av-filtro[data-filtro="gestor"]');
+    if (filtroGestor) filtroGestor.textContent = 'Avaliações 360°';
+    
+    const filtroColaborador = document.querySelector('.av-filtro[data-filtro="colaborador"]');
+    if (filtroColaborador) filtroColaborador.textContent = 'Avaliações 180°';
   }
 }
 
@@ -399,23 +481,33 @@ function renderHistorico() {
 
   let avaliacoes = getAvaliacoes();
 
-  // Colaborador logado não vê avaliações de gestores
-  if (!isGestor()) {
-    avaliacoes = avaliacoes.filter(a => a.tipo !== 'gestor');
+  // Filtrar por tipo de usuário logado
+  if (isColaborador()) {
+    // Colaborador vê apenas avaliações de gestores (360°)
+    avaliacoes = avaliacoes.filter(a => a.tipo === 'gestor');
+  } else if (isGestor()) {
+    // Gestor vê apenas avaliações de colaboradores (180°)
+    avaliacoes = avaliacoes.filter(a => a.tipo === 'colaborador');
   }
+  // Admin vê tudo
 
+  // Aplicar filtro adicional se houver
   if (filtroAtual !== 'todos') {
     avaliacoes = avaliacoes.filter(a => a.tipo === filtroAtual);
   }
+  
   avaliacoes = avaliacoes.slice().reverse();
 
   if (avaliacoes.length === 0) {
-    container.innerHTML = '<p class="av-empty">Nenhuma avaliação encontrada.</p>';
+    const tipoMsg = isColaborador() ? 'Nenhuma avaliação 360° encontrada.' : 
+                    isGestor() ? 'Nenhuma avaliação 180° encontrada.' : 
+                    'Nenhuma avaliação encontrada.';
+    container.innerHTML = `<p class="av-empty">${tipoMsg}</p>`;
     return;
   }
 
   container.innerHTML = avaliacoes.map(a => {
-    const tipoLabel = a.tipo === 'gestor' ? 'Gestor' : 'Colaborador';
+    const tipoLabel = a.tipo === 'gestor' ? 'Gestor (360°)' : 'Colaborador (180°)';
 
     if (a.tipo === 'colaborador' && a.tipoAvaliacao === 'comentario') {
       return `

@@ -719,5 +719,18 @@ Agora você tem o módulo Nine Box completo! Ele permite:
 - ✅ Deletar avaliações (admin)
 - ✅ Controle de permissões por tipo de usuário
 - ✅ Validação de valores (1-3 para performance e potential)
+- ✅ **Exportação CSV com UTF-8 BOM**: Ao exportar dados do Nine Box para CSV, o sistema usa UTF-8 BOM para garantir que caracteres acentuados sejam exibidos corretamente no Excel
+
+**IMPORTANTE sobre exportação CSV:**
+- O frontend adiciona BOM (Byte Order Mark) UTF-8 ao início do arquivo CSV
+- Isso garante que o Excel reconheça automaticamente a codificação UTF-8
+- Caracteres acentuados (á, é, í, ó, ú, ã, õ, ç) são exibidos corretamente
+- Código de exemplo:
+```javascript
+// Adiciona BOM UTF-8 para Excel
+const BOM = '\uFEFF';
+const csv = BOM + csvContent;
+const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+```
 
 Próximo passo: Módulo de Relatórios e Deploy!

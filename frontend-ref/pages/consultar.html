@@ -185,6 +185,7 @@
     body.dark-mode .pg-search-wrap input,
     body.dark-mode .pg-ra-search input { color: #f1f5f9; }
     body.dark-mode .pessoa-ra { background: #334155; }
+    body.dark-mode select { background: #0f172a; color: #f1f5f9; }
   </style>
 </head>
 <body>
@@ -222,13 +223,13 @@
       </a>
       <ul class="navbar-submenu">
         <li><a href="avaliacoes.html" class="navbar-submenu-link"><i class="fa-solid fa-star"></i> Avaliações</a></li>
-        <li><a href="nine-box.html" class="navbar-submenu-link"><i class="fa-solid fa-th"></i> Nine Box</a></li>
+        <li data-role="gestorOrAdmin"><a href="nine-box.html" class="navbar-submenu-link"><i class="fa-solid fa-th"></i> Nine Box</a></li>
         <li><a href="competencias.html" class="navbar-submenu-link"><i class="fa-solid fa-clipboard-check"></i> Competências</a></li>
-        <li><a href="avaliacao-180.html" class="navbar-submenu-link"><i class="fa-solid fa-rotate"></i> 180°</a></li>
-        <li><a href="avaliacao-360.html" class="navbar-submenu-link"><i class="fa-solid fa-arrows-spin"></i> 360°</a></li>
+        <li style="display:none"><a href="avaliacao-180.html" class="navbar-submenu-link"><i class="fa-solid fa-rotate"></i> 180°</a></li>
+        <li style="display:none"><a href="avaliacao-360.html" class="navbar-submenu-link"><i class="fa-solid fa-arrows-spin"></i> 360°</a></li>
       </ul>
     </li>
-    <li class="navbar-item" data-role="gestorOrAdmin"><a href="relatorios.html" class="navbar-link"><i class="fa-solid fa-chart-bar"></i><span>Relatórios</span></a></li>
+    <li class="navbar-item"><a href="relatorios.html" class="navbar-link"><i class="fa-solid fa-chart-bar"></i><span>Relatórios</span></a></li>
     <li class="navbar-item"><a href="../perfil.html" class="navbar-link"><i class="fa-solid fa-user"></i><span>Perfil</span></a></li>
   </ul>
 </nav>
@@ -251,6 +252,36 @@
         <input type="text" id="busca-ra" placeholder="Buscar por RA..." maxlength="10">
         <button onclick="buscarPorRA()"><i class="fa-solid fa-search"></i></button>
       </div>
+      <button onclick="exportarCSV()" style="padding:8px 14px;font-size:12px;background:#10b981;color:white;border:none;border-radius:8px;cursor:pointer;margin:0;width:auto;font-weight:600;display:flex;align-items:center;gap:6px" title="Exportar para CSV">
+        <i class="fa-solid fa-file-csv"></i> Exportar
+      </button>
+    </div>
+
+    <!-- Filtros adicionais -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;align-items:center;gap:8px;background:#fafafa;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:6px 12px">
+        <i class="fa-solid fa-building" style="color:var(--text-muted);font-size:12px"></i>
+        <select id="filtro-departamento" onchange="aplicarFiltros()" style="border:none;background:transparent;font-size:13px;font-family:inherit;color:var(--text);outline:none;cursor:pointer">
+          <option value="">Todos os departamentos</option>
+          <option value="Tecnologia da Informação">Tecnologia da Informação</option>
+          <option value="Recursos Humanos">Recursos Humanos</option>
+          <option value="Vendas">Vendas</option>
+          <option value="Financeiro">Financeiro</option>
+          <option value="Marketing">Marketing</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;background:#fafafa;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:6px 12px">
+        <i class="fa-solid fa-sort-alpha-down" style="color:var(--text-muted);font-size:12px"></i>
+        <select id="ordenacao" onchange="aplicarFiltros()" style="border:none;background:transparent;font-size:13px;font-family:inherit;color:var(--text);outline:none;cursor:pointer">
+          <option value="nome-asc">Nome (A-Z)</option>
+          <option value="nome-desc">Nome (Z-A)</option>
+          <option value="ra-asc">RA (crescente)</option>
+          <option value="ra-desc">RA (decrescente)</option>
+        </select>
+      </div>
+      <button onclick="limparFiltros()" style="padding:6px 12px;font-size:12px;background:#f1f5f9;color:var(--text-muted);border:1px solid var(--border);border-radius:8px;cursor:pointer;margin:0;width:auto;font-weight:600">
+        <i class="fa-solid fa-filter-circle-xmark"></i> Limpar filtros
+      </button>
     </div>
 
     <div id="lista-pessoas">
@@ -279,6 +310,69 @@
   </div>
 </div>
 
+<!-- Modal de edição -->
+<div class="modal-overlay" id="modal-editar">
+  <div class="modal-box" style="max-width:500px">
+    <h4>Editar Usuário</h4>
+    <form id="form-editar" style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Nome completo</label>
+        <input type="text" id="edit-nome" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px">
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">E-mail</label>
+        <input type="email" id="edit-email" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px">
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Cargo</label>
+        <input type="text" id="edit-cargo" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px">
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Departamento</label>
+        <select id="edit-departamento" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px">
+          <option value="">Selecione...</option>
+          <option value="Tecnologia da Informação">Tecnologia da Informação</option>
+          <option value="Recursos Humanos">Recursos Humanos</option>
+          <option value="Vendas">Vendas</option>
+          <option value="Financeiro">Financeiro</option>
+          <option value="Marketing">Marketing</option>
+        </select>
+      </div>
+      <div id="edit-tipo-container">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Tipo de usuário</label>
+        <select id="edit-tipo" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px">
+          <option value="colaborador">Colaborador</option>
+          <option value="gestor">Gestor</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="button" onclick="fecharModalEditar()" style="flex:1;background:#f1f5f9;color:var(--text);margin:0">Cancelar</button>
+        <button type="submit" style="flex:1;margin:0" id="btn-salvar-edicao">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de confirmação de exclusão -->
+<div class="modal-overlay" id="modal-confirmar-exclusao">
+  <div class="modal-box" style="max-width:400px">
+    <h4 style="color:var(--danger)"><i class="fa-solid fa-triangle-exclamation"></i> Confirmar Exclusão</h4>
+    <p style="margin:16px 0;font-size:14px;color:var(--text-muted)">
+      Tem certeza que deseja excluir o usuário <strong id="nome-excluir"></strong>?
+    </p>
+    <p style="font-size:13px;color:var(--danger);margin-bottom:16px">
+      <i class="fa-solid fa-circle-info"></i> Esta ação não pode ser desfeita.
+    </p>
+    <div style="display:flex;gap:8px">
+      <button onclick="fecharModalConfirmarExclusao()" style="flex:1;background:#f1f5f9;color:var(--text);margin:0">Cancelar</button>
+      <button onclick="confirmarExclusao()" style="flex:1;background:var(--danger);margin:0" id="btn-confirmar-exclusao">
+        <i class="fa-solid fa-trash"></i> Excluir
+      </button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   import { requireRole, isAdmin } from '../js/auth.js';
   import { usersApi } from '../js/api.js';
@@ -290,6 +384,8 @@
   let paginaAtual = 1;
   let filtroAtual = 'todos';
   let totalPaginas = 1;
+  let departamentoAtual = '';
+  let ordenacaoAtual = 'nome-asc';
 
   async function carregarUsuarios(page = 1) {
     paginaAtual = page;
@@ -298,10 +394,17 @@
 
     const busca = document.getElementById('busca-nome').value.trim();
     if (busca) params.search = busca;
+    
+    if (departamentoAtual) params.departamento = departamentoAtual;
 
     try {
       const res = await usersApi.list(params);
-      const { users, pagination } = res.data;
+      let { users } = res.data;
+      const { pagination } = res.data;
+      
+      // Aplicar ordenação
+      users = ordenarUsuarios(users, ordenacaoAtual);
+      
       totalPaginas = pagination.totalPages;
       renderLista(users);
       renderPaginacao(pagination);
@@ -311,6 +414,23 @@
           <i class="fa-solid fa-triangle-exclamation"></i>
           <p>Erro ao carregar usuários.</p>
         </div>`;
+    }
+  }
+  
+  function ordenarUsuarios(users, ordem) {
+    const sorted = [...users];
+    
+    switch(ordem) {
+      case 'nome-asc':
+        return sorted.sort((a, b) => a.nome.localeCompare(b.nome));
+      case 'nome-desc':
+        return sorted.sort((a, b) => b.nome.localeCompare(a.nome));
+      case 'ra-asc':
+        return sorted.sort((a, b) => a.ra.localeCompare(b.ra));
+      case 'ra-desc':
+        return sorted.sort((a, b) => b.ra.localeCompare(a.ra));
+      default:
+        return sorted;
     }
   }
 
@@ -347,6 +467,7 @@
           </div>
           <div class="pessoa-actions">
             <button class="btn-ver" onclick="verDetalhes('${u.id}')"><i class="fa-solid fa-eye"></i> Ver</button>
+            ${(isAdmin() || (isGestor() && u.tipo === 'colaborador')) ? `<button class="btn-ver" onclick="editarUsuario('${u.id}')" style="background:#fef3c7;color:#92400e;border-color:#fde68a"><i class="fa-solid fa-pen"></i> Editar</button>` : ''}
             ${isAdmin() && u.tipo !== 'admin' ? `<button class="btn-del" onclick="deletarUsuario('${u.id}','${u.nome}')"><i class="fa-solid fa-trash"></i></button>` : ''}
           </div>
         </div>`;
@@ -395,6 +516,26 @@
     const nova = paginaAtual + delta;
     if (nova >= 1 && nova <= totalPaginas) carregarUsuarios(nova);
   };
+  
+  window.aplicarFiltros = function() {
+    departamentoAtual = document.getElementById('filtro-departamento').value;
+    ordenacaoAtual = document.getElementById('ordenacao').value;
+    carregarUsuarios(1);
+  };
+  
+  window.limparFiltros = function() {
+    document.getElementById('busca-nome').value = '';
+    document.getElementById('busca-ra').value = '';
+    document.getElementById('filtro-departamento').value = '';
+    document.getElementById('ordenacao').value = 'nome-asc';
+    filtroAtual = 'todos';
+    departamentoAtual = '';
+    ordenacaoAtual = 'nome-asc';
+    document.querySelectorAll('.pg-filtro').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.filtro === 'todos');
+    });
+    carregarUsuarios(1);
+  };
 
   window.verDetalhes = async function(id) {
     try {
@@ -419,18 +560,183 @@
   };
 
   window.deletarUsuario = async function(id, nome) {
-    if (!confirm(`Deletar o usuário "${nome}"? Esta ação não pode ser desfeita.`)) return;
+    // Usar modal de confirmação
+    usuarioExcluindoId = id;
+    document.getElementById('nome-excluir').textContent = nome;
+    document.getElementById('modal-confirmar-exclusao').classList.add('open');
+  };
+  
+  let usuarioExcluindoId = null;
+  
+  window.fecharModalConfirmarExclusao = function() {
+    document.getElementById('modal-confirmar-exclusao').classList.remove('open');
+    usuarioExcluindoId = null;
+  };
+  
+  window.confirmarExclusao = async function() {
+    if (!usuarioExcluindoId) return;
+    
+    const btn = document.getElementById('btn-confirmar-exclusao');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Excluindo...';
+    
     try {
-      await usersApi.delete(id);
-      showToast(`${nome} removido com sucesso.`, 'success');
+      await usersApi.delete(usuarioExcluindoId);
+      showToast('Usuário removido com sucesso.', 'success');
+      fecharModalConfirmarExclusao();
       carregarUsuarios(paginaAtual);
     } catch {}
+    finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-trash"></i> Excluir';
+    }
   };
+
+  // Editar usuário
+  let usuarioEditandoId = null;
+  
+  window.editarUsuario = async function(id) {
+    try {
+      const res = await usersApi.getById(id);
+      const u = res.data;
+      usuarioEditandoId = id;
+      
+      // Preencher formulário
+      document.getElementById('edit-nome').value = u.nome || '';
+      document.getElementById('edit-email').value = u.email || '';
+      document.getElementById('edit-cargo').value = u.cargo || '';
+      document.getElementById('edit-departamento').value = u.departamento || '';
+      document.getElementById('edit-tipo').value = u.tipo || 'colaborador';
+      
+      // Admin pode editar tipo, gestor não
+      if (!isAdmin()) {
+        document.getElementById('edit-tipo-container').style.display = 'none';
+      } else {
+        document.getElementById('edit-tipo-container').style.display = 'block';
+      }
+      
+      document.getElementById('modal-editar').classList.add('open');
+    } catch {}
+  };
+  
+  window.fecharModalEditar = function() {
+    document.getElementById('modal-editar').classList.remove('open');
+    usuarioEditandoId = null;
+  };
+  
+  // Salvar edição
+  document.getElementById('form-editar').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!usuarioEditandoId) return;
+    
+    const nome = document.getElementById('edit-nome').value.trim();
+    const email = document.getElementById('edit-email').value.trim().toLowerCase();
+    const cargo = document.getElementById('edit-cargo').value.trim();
+    const departamento = document.getElementById('edit-departamento').value;
+    const tipo = document.getElementById('edit-tipo').value;
+    
+    if (!nome) { showToast('Digite o nome.', 'error'); return; }
+    if (!email) { showToast('Digite o e-mail.', 'error'); return; }
+    
+    // Validar formato de email
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.edu\.br$/i.test(email)) {
+      showToast('Use um e-mail institucional válido (ex: nome@faculdade.edu.br)', 'error');
+      return;
+    }
+    
+    // Validar email único (exceto o próprio usuário)
+    try {
+      const resUsers = await usersApi.list({ limit: 1000 });
+      const emailExiste = resUsers.data.users.some(u => 
+        u.email.toLowerCase() === email && u.id !== usuarioEditandoId
+      );
+      if (emailExiste) {
+        showToast('Este e-mail já está cadastrado para outro usuário.', 'error');
+        return;
+      }
+    } catch {}
+    
+    const btn = document.getElementById('btn-salvar-edicao');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+    
+    try {
+      const payload = { nome, email, cargo, departamento };
+      if (isAdmin()) payload.tipo = tipo;
+      
+      await usersApi.update(usuarioEditandoId, payload);
+      showToast('Usuário atualizado com sucesso!', 'success');
+      fecharModalEditar();
+      carregarUsuarios(paginaAtual);
+    } catch {}
+    finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Salvar Alterações';
+    }
+  });
 
   // Fechar modal clicando fora
   document.getElementById('modal-usuario').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) window.fecharModal();
   });
+  
+  document.getElementById('modal-editar').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) window.fecharModalEditar();
+  });
+  
+  document.getElementById('modal-confirmar-exclusao').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) window.fecharModalConfirmarExclusao();
+  });
+  
+  // Exportar CSV
+  window.exportarCSV = async function() {
+    try {
+      const res = await usersApi.list({ limit: 1000 });
+      let users = res.data.users;
+      
+      // Aplicar filtros atuais
+      if (filtroAtual !== 'todos') {
+        users = users.filter(u => u.tipo === filtroAtual);
+      }
+      if (departamentoAtual) {
+        users = users.filter(u => u.departamento === departamentoAtual);
+      }
+      
+      // Ordenar
+      users = ordenarUsuarios(users, ordenacaoAtual);
+      
+      // Criar CSV com BOM para Excel
+      const BOM = '\uFEFF';
+      const headers = ['RA', 'Nome', 'E-mail', 'Tipo', 'Cargo', 'Departamento', 'Data de Cadastro'];
+      const tipoLabels = { admin: 'Administrador', gestor: 'Gestor', colaborador: 'Colaborador' };
+      
+      const rows = users.map(u => [
+        u.ra,
+        u.nome,
+        u.email,
+        tipoLabels[u.tipo] || u.tipo,
+        u.cargo || '',
+        u.departamento || '',
+        new Date(u.dataCadastro || u.createdAt || Date.now()).toLocaleDateString('pt-BR')
+      ]);
+      
+      const csvContent = BOM + [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+      
+      // Download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `usuarios_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      
+      showToast('Arquivo CSV exportado com sucesso!', 'success');
+    } catch {
+      showToast('Erro ao exportar CSV.', 'error');
+    }
+  };
 
   carregarUsuarios();
 </script>

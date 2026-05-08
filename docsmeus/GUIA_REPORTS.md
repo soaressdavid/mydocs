@@ -560,5 +560,25 @@ Agora você tem o módulo de relatórios completo! Ele permite:
 - ✅ Exportação completa de dados (admin)
 - ✅ Controle de permissões por tipo de usuário
 - ✅ Agregações e estatísticas automáticas
+- ✅ **Exportação CSV com UTF-8 BOM**: Todos os relatórios exportados em CSV usam UTF-8 BOM para compatibilidade com Excel
+
+**IMPORTANTE sobre exportação CSV:**
+- O sistema adiciona BOM (Byte Order Mark) UTF-8 ao início de todos os arquivos CSV exportados
+- Isso garante que o Excel reconheça automaticamente a codificação UTF-8
+- Caracteres acentuados (á, é, í, ó, ú, ã, õ, ç) são exibidos corretamente
+- Aplicável a: relatórios de usuários, avaliações, Nine Box e competências
+- Código de exemplo:
+```javascript
+// Adiciona BOM UTF-8 para Excel
+const BOM = '\uFEFF';
+const csv = BOM + csvContent;
+const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+// Cria link de download
+const link = document.createElement('a');
+link.href = URL.createObjectURL(blob);
+link.download = `relatorio_${Date.now()}.csv`;
+link.click();
+```
 
 Próximo passo: Deploy e configuração de produção!

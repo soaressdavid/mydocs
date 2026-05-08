@@ -6,19 +6,40 @@ Este guia ensina como implementar o módulo de avaliações do zero, seguindo o 
 
 **IMPORTANTE**: Este sistema implementa avaliações **anônimas** e **bidirecionais**:
 
-- ✅ **Gestor** pode avaliar colaboradores (anônimo)
-- ✅ **Colaborador** pode avaliar gestores (anônimo)  
+- ✅ **Gestor** pode avaliar colaboradores (anônimo) - **Avaliação 180°**
+- ✅ **Colaborador** pode avaliar gestores (anônimo) - **Avaliação 360°**
 - ✅ **Admin** pode fazer qualquer tipo de avaliação
 - ✅ **avaliadorId** é salvo no banco (controle interno)
 - ❌ **avaliadorId** NÃO é retornado na API (mantém anonimato)
 - ✅ **tipoAvaliacao** é determinado automaticamente pelo sistema
 - ✅ Avaliado vê a avaliação mas não sabe quem fez
 - ✅ Admin pode ver quem avaliou (para auditoria)
+- ✅ **Limite de 24 horas**: Avaliações podem ser editadas/excluídas apenas nas primeiras 24 horas após criação
+- ✅ **Admin sem limite**: Administradores podem editar/excluir avaliações a qualquer momento
 
 **Tipos de Avaliação (determinados automaticamente):**
-- `"gestor_para_colaborador"` - Gestor avalia colaborador
-- `"colaborador_para_gestor"` - Colaborador avalia gestor  
+- `"gestor_para_colaborador"` - Gestor avalia colaborador (**180°**)
+- `"colaborador_para_gestor"` - Colaborador avalia gestor (**360°**)
 - `"avaliacao_360"` - Admin avalia qualquer um
+
+**Visibilidade por Tipo de Usuário:**
+- 👤 **Colaborador logado** → Vê apenas avaliações tipo `colaborador_para_gestor` (360°)
+- 👔 **Gestor logado** → Vê apenas avaliações tipo `gestor_para_colaborador` (180°)
+- 🔑 **Admin logado** → Vê todos os tipos de avaliação
+
+**Exemplo Prático:**
+```
+Colaborador "Ana" faz login:
+  ✅ Vê avaliações 360° (onde colaboradores avaliam gestores)
+  ❌ NÃO vê avaliações 180° (onde gestores avaliam colaboradores)
+
+Gestor "João" faz login:
+  ✅ Vê avaliações 180° (onde gestores avaliam colaboradores)
+  ❌ NÃO vê avaliações 360° (onde colaboradores avaliam gestores)
+
+Admin faz login:
+  ✅ Vê TODAS as avaliações (180° + 360° + avaliações admin)
+```
 
 ---
 
@@ -398,9 +419,12 @@ class EvaluationService {
   }
 
   async findAll(filters, userId, userTipo) {
-    // Colaborador só pode ver suas próprias avaliações
+    // Filtrar por tipo de avaliação baseado no usuário logado
     if (userTipo === 'colaborador') {
-      // Busca avaliações que fez OU que recebeu
+      // Colaborador vê apenas avaliações tipo "colaborador_para_gestor" (360°)
+      filters.tipoAvaliacao = 'colaborador_para_gestor';
+      
+      // Busca avaliações que fez OU que recebeu (do tipo 360°)
       const [avaliacoesFeitas, avaliacoesRecebidas] = await Promise.all([
         this.evaluationRepository.findByAvaliador(userId, filters),
         this.evaluationRepository.findByAvaliado(userId, filters)
@@ -426,6 +450,13 @@ class EvaluationService {
         }
       };
     }
+
+    if (userTipo === 'gestor') {
+      // Gestor vê apenas avaliações tipo "gestor_para_colaborador" (180°)
+      filters.tipoAvaliacao = 'gestor_para_colaborador';
+    }
+
+    // Admin vê todos os tipos (não filtra por tipoAvaliacao)
 
     const result = await this.evaluationRepository.findAll(filters);
     return {
@@ -477,6 +508,14 @@ class EvaluationService {
       throw new AppError('Sem permissão para editar esta avaliação', 403);
     }
 
+    // Verificar limite de 24 horas (exceto para admin)
+    if (userTipo !== 'admin') {
+      const horasPassadas = (Date.now() - new Date(evaluation.createdAt).getTime()) / (1000 * 60 * 60);
+      if (horasPassadas > 24) {
+        throw new AppError('Avaliações só podem ser editadas nas primeiras 24 horas', 403);
+      }
+    }
+
     // Recalcular média se critérios foram alterados
     if (data.criterios) {
       const criteriosArray = Object.values(data.criterios);
@@ -498,6 +537,14 @@ class EvaluationService {
     // Apenas o avaliador ou admin pode deletar
     if (userTipo !== 'admin' && evaluation.avaliadorId !== userId) {
       throw new AppError('Sem permissão para deletar esta avaliação', 403);
+    }
+
+    // Verificar limite de 24 horas (exceto para admin)
+    if (userTipo !== 'admin') {
+      const horasPassadas = (Date.now() - new Date(evaluation.createdAt).getTime()) / (1000 * 60 * 60);
+      if (horasPassadas > 24) {
+        throw new AppError('Avaliações só podem ser excluídas nas primeiras 24 horas', 403);
+      }
     }
 
     await this.evaluationRepository.delete(id);
@@ -860,3 +907,193 @@ Agora você tem o módulo de avaliações completo com sistema anônimo e bidire
 - ✅ Filtros e paginação
 
 Próximo passo: Módulo Nine Box!
+
+
+---
+
+## 🧪 Testando Visibilidade por Tipo de Usuário
+
+### Teste 1: Colaborador vê apenas 360°
+
+**1. Login como colaborador:**
+```
+POST http://localhost:3000/api/users/login
+Content-Type: application/json
+
+{
+  "email": "ana@eniac.edu.br",
+  "senha": "senha123"
+}
+```
+
+**2. Listar avaliações (como colaborador):**
+```
+GET http://localhost:3000/api/evaluations
+Authorization: Bearer TOKEN_DO_COLABORADOR
+```
+
+**Resultado esperado:**
+```json
+{
+  "success": true,
+  "data": {
+    "evaluations": [
+      {
+        "id": "uuid",
+        "tipoAvaliacao": "colaborador_para_gestor",  // ✅ Apenas 360°
+        "avaliadoId": "uuid-do-gestor",
+        "criterios": {...},
+        "media": 4.5,
+        "comentario": "Gestor muito acessível",
+        "anonima": true,
+        "avaliado": {
+          "nome": "João Silva",
+          "tipo": "gestor"
+        }
+      }
+      // ❌ NÃO aparece avaliações tipo "gestor_para_colaborador" (180°)
+    ],
+    "pagination": {...}
+  }
+}
+```
+
+---
+
+### Teste 2: Gestor vê apenas 180°
+
+**1. Login como gestor:**
+```
+POST http://localhost:3000/api/users/login
+Content-Type: application/json
+
+{
+  "email": "joao@eniac.edu.br",
+  "senha": "senha123"
+}
+```
+
+**2. Listar avaliações (como gestor):**
+```
+GET http://localhost:3000/api/evaluations
+Authorization: Bearer TOKEN_DO_GESTOR
+```
+
+**Resultado esperado:**
+```json
+{
+  "success": true,
+  "data": {
+    "evaluations": [
+      {
+        "id": "uuid",
+        "tipoAvaliacao": "gestor_para_colaborador",  // ✅ Apenas 180°
+        "avaliadoId": "uuid-do-colaborador",
+        "criterios": {...},
+        "media": 4.8,
+        "comentario": "Colaboradora muito dedicada",
+        "anonima": true,
+        "avaliado": {
+          "nome": "Ana Costa",
+          "tipo": "colaborador"
+        }
+      }
+      // ❌ NÃO aparece avaliações tipo "colaborador_para_gestor" (360°)
+    ],
+    "pagination": {...}
+  }
+}
+```
+
+---
+
+### Teste 3: Admin vê tudo
+
+**1. Login como admin:**
+```
+POST http://localhost:3000/api/users/login
+Content-Type: application/json
+
+{
+  "email": "admin@eniac.edu.br",
+  "senha": "admin123"
+}
+```
+
+**2. Listar avaliações (como admin):**
+```
+GET http://localhost:3000/api/evaluations
+Authorization: Bearer TOKEN_DO_ADMIN
+```
+
+**Resultado esperado:**
+```json
+{
+  "success": true,
+  "data": {
+    "evaluations": [
+      {
+        "id": "uuid-1",
+        "tipoAvaliacao": "gestor_para_colaborador",  // ✅ 180°
+        "avaliadorId": "uuid-gestor",  // ✅ Admin vê quem avaliou
+        "avaliadoId": "uuid-colaborador",
+        "criterios": {...},
+        "media": 4.8,
+        "anonima": true
+      },
+      {
+        "id": "uuid-2",
+        "tipoAvaliacao": "colaborador_para_gestor",  // ✅ 360°
+        "avaliadorId": "uuid-colaborador",  // ✅ Admin vê quem avaliou
+        "avaliadoId": "uuid-gestor",
+        "criterios": {...},
+        "media": 4.5,
+        "anonima": true
+      },
+      {
+        "id": "uuid-3",
+        "tipoAvaliacao": "avaliacao_360",  // ✅ Avaliação admin
+        "avaliadorId": "uuid-admin",
+        "avaliadoId": "uuid-qualquer",
+        "criterios": {...},
+        "media": 5.0,
+        "anonima": false
+      }
+    ],
+    "pagination": {...}
+  }
+}
+```
+
+---
+
+## 📊 Resumo da Visibilidade
+
+| Tipo de Usuário | Vê Avaliações 180° | Vê Avaliações 360° | Vê Avaliações Admin | Vê avaliadorId |
+|-----------------|-------------------|-------------------|---------------------|----------------|
+| 👤 Colaborador | ❌ Não | ✅ Sim | ❌ Não | ❌ Não |
+| 👔 Gestor | ✅ Sim | ❌ Não | ❌ Não | ❌ Não |
+| 🔑 Admin | ✅ Sim | ✅ Sim | ✅ Sim | ✅ Sim |
+
+---
+
+## ✅ Checklist de Implementação
+
+- [ ] Criar evaluation.validation.js
+- [ ] Criar evaluation.repository.js
+- [ ] Criar evaluation.service.js com lógica de visibilidade
+- [ ] Criar evaluation.controller.js
+- [ ] Criar evaluation.routes.js
+- [ ] Adicionar rota no app.js
+- [ ] Testar criação de avaliação (gestor → colaborador)
+- [ ] Testar criação de avaliação (colaborador → gestor)
+- [ ] Testar listagem como colaborador (só vê 360°)
+- [ ] Testar listagem como gestor (só vê 180°)
+- [ ] Testar listagem como admin (vê tudo)
+- [ ] Verificar que avaliadorId não aparece (exceto para admin)
+- [ ] Testar estatísticas
+- [ ] Testar update e delete
+
+---
+
+Pronto! Agora o sistema de avaliações está completo com visibilidade correta por tipo de usuário! 🎉

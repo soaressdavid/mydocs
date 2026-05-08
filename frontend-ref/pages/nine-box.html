@@ -45,13 +45,13 @@
       </a>
       <ul class="navbar-submenu">
         <li><a href="avaliacoes.html" class="navbar-submenu-link"><i class="fa-solid fa-star"></i> Avaliações</a></li>
-        <li><a href="nine-box.html" class="navbar-submenu-link active"><i class="fa-solid fa-th"></i> Nine Box</a></li>
+        <li data-role="gestorOrAdmin"><a href="nine-box.html" class="navbar-submenu-link active"><i class="fa-solid fa-th"></i> Nine Box</a></li>
         <li><a href="competencias.html" class="navbar-submenu-link"><i class="fa-solid fa-clipboard-check"></i> Competências</a></li>
-        <li><a href="avaliacao-180.html" class="navbar-submenu-link"><i class="fa-solid fa-rotate"></i> 180°</a></li>
-        <li><a href="avaliacao-360.html" class="navbar-submenu-link"><i class="fa-solid fa-arrows-spin"></i> 360°</a></li>
+        <li style="display:none"><a href="avaliacao-180.html" class="navbar-submenu-link"><i class="fa-solid fa-rotate"></i> 180°</a></li>
+        <li style="display:none"><a href="avaliacao-360.html" class="navbar-submenu-link"><i class="fa-solid fa-arrows-spin"></i> 360°</a></li>
       </ul>
     </li>
-    <li class="navbar-item" data-role="gestorOrAdmin"><a href="relatorios.html" class="navbar-link"><i class="fa-solid fa-chart-bar"></i><span>Relatórios</span></a></li>
+    <li class="navbar-item"><a href="relatorios.html" class="navbar-link"><i class="fa-solid fa-chart-bar"></i><span>Relatórios</span></a></li>
     <li class="navbar-item"><a href="../perfil.html" class="navbar-link"><i class="fa-solid fa-user"></i><span>Perfil</span></a></li>
   </ul>
 </nav>
@@ -282,28 +282,13 @@
   }
 
   function renderGrid() {
+    // Limpar todas as caixas - não mostrar nada dentro delas
     for (let p = 1; p <= 3; p++) {
       for (let pt = 1; pt <= 3; pt++) {
         const el = document.getElementById(`nb-people-${p}-${pt}`);
         if (el) el.innerHTML = '';
       }
     }
-
-    let lista = allNineBoxes;
-    if (filtroAtual !== 'todos') lista = lista.filter(nb => nb.pessoa?.tipo === filtroAtual);
-
-    lista.forEach(nb => {
-      const container = document.getElementById(`nb-people-${nb.performance}-${nb.potential}`);
-      if (!container) return;
-      const tipo = nb.pessoa?.tipo || 'colaborador';
-      const chipClass = tipo === 'gestor' ? 'professor' : 'estagiario';
-      const chip = document.createElement('div');
-      chip.className = `nb-chip ${chipClass}`;
-      chip.innerHTML = `<span class="nb-chip-dot"></span><span class="nb-chip-name">${nb.pessoa?.nome || 'Pessoa'}</span>`;
-      chip.title = `${nb.pessoa?.nome} — ${nb.categoria}`;
-      chip.addEventListener('click', (e) => { e.stopPropagation(); abrirModal(nb); });
-      container.appendChild(chip);
-    });
   }
 
   window.selectAxis = function(axis, val) {
@@ -336,14 +321,25 @@
   }
 
   window.clickBox = function(perf, pot) {
+    // Apenas para gestores/admins: selecionar a posição no formulário
     if (!isGestorOrAdmin()) return;
-    nbPerf = perf; nbPot = pot;
-    document.querySelectorAll('#perf-btns .nb-axis-btn').forEach(b => b.classList.toggle('selected', parseInt(b.dataset.val) === perf));
-    document.querySelectorAll('#pot-btns .nb-axis-btn').forEach(b => b.classList.toggle('selected', parseInt(b.dataset.val) === pot));
+    
+    nbPerf = perf; 
+    nbPot = pot;
+    
+    // Atualizar botões selecionados
+    document.querySelectorAll('#perf-btns .nb-axis-btn').forEach(b => 
+      b.classList.toggle('selected', parseInt(b.dataset.val) === perf)
+    );
+    document.querySelectorAll('#pot-btns .nb-axis-btn').forEach(b => 
+      b.classList.toggle('selected', parseInt(b.dataset.val) === pot)
+    );
+    
     atualizarPreview();
     destacarBox();
+    
     const cat = CATEGORIAS[`${perf}-${pot}`];
-    showToast(`Posição: ${cat.icon} ${cat.nome}. Selecione a pessoa e clique em Salvar.`, 'info');
+    showToast(`Posição selecionada: ${cat.icon} ${cat.nome}. Escolha a pessoa e clique em Salvar.`, 'info');
   };
 
   window.salvarNB = async function() {

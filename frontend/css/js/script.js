@@ -18,6 +18,103 @@ function saveAvaliacoes(avaliacoes) {
 }
 
 // =============================================
+// AUTENTICAÇÃO MOCK (Simulação do Backend)
+// =============================================
+const authMock = {
+  login(email, senha) {
+    const usuariosMock = JSON.parse(localStorage.getItem('usuariosMock') || '[]');
+    const usuario = usuariosMock.find(u => u.email === email);
+    
+    if (!usuario || usuario.senha !== senha) {
+      throw new Error('Email ou senha incorretos');
+    }
+    
+    const token = btoa(JSON.stringify({
+      userId: usuario.id,
+      email: usuario.email,
+      tipo: usuario.tipo,
+      ra: usuario.ra,
+      timestamp: Date.now()
+    }));
+    
+    localStorage.setItem('token', token);
+    const { senha: _, ...usuarioSemSenha } = usuario;
+    localStorage.setItem('user', JSON.stringify(usuarioSemSenha));
+    localStorage.setItem('perfilLogado', JSON.stringify({ id: usuario.id }));
+    
+    return { token, user: usuarioSemSenha };
+  },
+  
+  logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('perfilLogado');
+    window.location.href = '/pages/login.html';
+  },
+  
+  isAuthenticated() {
+    return !!localStorage.getItem('token');
+  },
+  
+  getUser() {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  },
+  
+  isAdmin() {
+    const user = this.getUser();
+    return user && user.tipo === 'admin';
+  },
+  
+  isGestor() {
+    const user = this.getUser();
+    return user && user.tipo === 'gestor';
+  },
+  
+  isColaborador() {
+    const user = this.getUser();
+    return user && user.tipo === 'colaborador';
+  },
+  
+  isGestorOrAdmin() {
+    const user = this.getUser();
+    return user && (user.tipo === 'gestor' || user.tipo === 'admin');
+  },
+  
+  requireAuth() {
+    if (!this.isAuthenticated()) {
+      window.location.href = '/pages/login.html';
+      return false;
+    }
+    return true;
+  },
+  
+  requireAdmin() {
+    if (!this.requireAuth()) return false;
+    if (!this.isAdmin()) {
+      alert('Acesso negado. Apenas administradores.');
+      window.location.href = '/index.html';
+      return false;
+    }
+    return true;
+  },
+  
+  requireGestor() {
+    if (!this.requireAuth()) return false;
+    if (!this.isGestorOrAdmin()) {
+      alert('Acesso negado. Apenas gestores ou administradores.');
+      window.location.href = '/index.html';
+      return false;
+    }
+    return true;
+  }
+};
+
+// Exportar para uso global
+window.authMock = authMock;
+window.auth = authMock;
+
+// =============================================
 // CADASTRAR
 // =============================================
 function cadastrar() {
